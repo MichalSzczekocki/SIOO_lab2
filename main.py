@@ -1,58 +1,111 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QRadioButton, QComboBox, QSlider, \
-    QPushButton
+    QPushButton, QLineEdit
 from PyQt5.QtCore import Qt
+from inspect import getmembers
 import numpy as np
 import matplotlib.pyplot as plt
 import math
 from scipy import optimize
 
 
-class Polynomial:
+class Main(QWidget):
 
-    def __init__(self, *coefficients):
-        """ input: coefficients are in the form a_n, ...a_1, a_0
-        """
-        self.coefficients = list(coefficients)  # tuple is turned into a list
+    def __init__(self, parent=None):
+        super(Main, self).__init__(parent)
 
-    def __repr__(self):
-        """
-        method to return the canonical string representation
-        of a polynomial.
-        """
-        return "Polynomial" + str(tuple(self.coefficients))
+        self.cb = QComboBox()
 
-    def __str__(self):
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setRange(-100, 100)
+        self.sliderValue = QLabel('0')
+        self.slider.valueChanged.connect(self.updateLabel)
+        self.sliderValue.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
 
-        def x_expr(degree):
-            if degree == 0:
-                res = ""
-            elif degree == 1:
-                res = "x"
-            else:
-                res = "x^" + str(degree)
-            return res
+        self.etap = 0
+        self.stop = "Ilość iteracji"
+        self.wybor = "Ilość iteracji"
+        self.funkcja = "brak"
+        self.poczatek = 0
 
-        degree = len(self.coefficients) - 1
-        res = ""
+        self.layout = QVBoxLayout()
 
-        for i in range(0, degree + 1):
-            coeff = self.coefficients[i]
-            # nothing has to be done if coeff is 0:
-            if abs(coeff) == 1 and i < degree:
-                # 1 in front of x shouldn't occur, e.g. x instead of 1x
-                # but we need the plus or minus sign:
-                res += f"{'+' if coeff > 0 else '-'}{x_expr(degree - i)}"
-            elif coeff != 0:
-                res += f"{coeff:+g}{x_expr(degree - i)}"
+        self.label = QLabel("Wybierz warinek stopu")
+        self.label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+        self.layout.addWidget(self.label)
 
-        return res.lstrip('+')  # removing leading '+'
+        self.b1 = QRadioButton("Ilość iteracji")
+        self.b1.setChecked(True)
+        self.b1.toggled.connect(lambda: self.radioButtonZmiana(self.b1))
+        self.layout.addWidget(self.b1)
 
-    def __call__(self, x):
-        res = 0
-        for coeff in self.coefficients:
-            res = res * x + coeff
-        return res
+        self.b2 = QRadioButton("Brak postępu")
+        self.b2.toggled.connect(lambda: self.radioButtonZmiana(self.b2))
+
+        self.layout.addWidget(self.b2)
+        self.setLayout(self.layout)
+
+        self.next = QPushButton('OK')
+        self.next.clicked.connect(self.zmianaEtapu)
+        self.layout.addWidget(self.next)
+
+        self.lineEdit = QLineEdit()
+
+    def radioButtonZmiana(self, b):
+
+        if b.isChecked():
+            self.wybor = b.text()
+
+    def zmianaEtapu(self):
+
+        if self.etap == 0:
+            self.etap += 1
+            self.stop = self.wybor
+            self.label.setText("Wybierz punkt startowy")
+            self.layout.removeWidget(self.b1)
+            self.layout.removeWidget(self.b2)
+            self.layout.removeWidget(self.next)
+            self.b1.deleteLater()
+            self.b2.deleteLater()
+            self.layout.addWidget(self.slider)
+            self.layout.addWidget(self.sliderValue)
+            self.layout.addWidget(self.next)
+
+        elif self.etap == 1:
+            self.etap += 1
+            self.poczatek = self.slider.value()
+            self.layout.removeWidget(self.slider)
+            self.layout.removeWidget(self.sliderValue)
+            self.slider.deleteLater()
+            self.sliderValue.deleteLater()
+            self.label.setText("Wybierz funkcję testową")
+            self.layout.addWidget(self.lineEdit)
+            self.layout.addWidget(self.next)
+
+        elif self.etap == 2:
+            self.next.setDisabled(True)
+            self.funkcja = self.lineEdit.text()
+            self.layout.removeWidget(self.lineEdit)
+            self.lineEdit.deleteLater()
+            self.label.setText("Podaj parametry")
+            print(self.funkcja)
+            print(self.poczatek)
+            print(self.stop)
+
+    def updateLabel(self, value):
+        self.sliderValue.setText(str(value))
+
+    def updateLabelFloat(self, value):
+        self.sliderValue.setText(str(value / 100.0))
+
+    def calculate(function, name_dict):
+        math_name_dict = dict(getmembers(math))
+
+        # Ax = np.array([1, 2, 3])
+        # Ay = np.array([2, 4, 6])
+        # ret = np.array(list(map(lambda x, y: eval_math_fn(fun, {'x': x, 'y': y}), Ax, Ay)))
+
+        return eval(function, {**name_dict, **math_name_dict})
 
 
 def main():
