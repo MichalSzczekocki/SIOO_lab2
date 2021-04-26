@@ -30,7 +30,12 @@ class Main(QWidget):
         self.wybor = "Ilość iteracji"
         self.funkcja = "brak"
         self.poczatek = 0
-        self.iteracje = 0  # wybór
+        self.iteracje = 100  # wybór
+        self.epsilon = 0  # wybór
+        self.odbicie = 0  # wybór
+        self.kontrakcja = 0  # wybór
+        self.ekspansja = 0  # wybór
+        self.floatLabel = 0
 
         self.layout = QVBoxLayout()
 
@@ -62,7 +67,7 @@ class Main(QWidget):
 
     def zmianaEtapu(self):
 
-        if self.etap == 0:
+        if self.etap == 0:  # zapis stop wybór start
             self.etap += 1
             self.stop = self.wybor
             self.label.setText("Wybierz punkt startowy")
@@ -75,34 +80,73 @@ class Main(QWidget):
             self.layout.addWidget(self.sliderValue)
             self.layout.addWidget(self.next)
 
-        elif self.etap == 1:
+        elif self.etap == 1:  # zapis start wybór epsilon/iteracje
             self.etap += 1
             self.poczatek = self.slider.value()
+            if self.stop == "Ilość iteracji":
+                self.label.setText("Wybierz ilość iteracji")
+                self.slider.setRange(1, 50)
+                self.slider.setValue(25)
+            else:
+                self.label.setText("Wybierz dokładność")
+                self.slider.setRange(0, 1000)
+                self.slider.setValue(500)
+                self.sliderValue.setText('0.5')
+                self.slider.valueChanged.connect(self.updateLabelFloat)
+                self.floatLabel = 1000.0
+
+        elif self.etap == 2:  # zapis epsilon/iteracje wybor odbicie
+            self.label.setText("Wybierz wartość współczynnika odbicia")
+            self.etap += 1
+            if self.stop == "Ilość iteracji":
+                self.iteracje = self.slider.value()
+            else:
+                self.epsilon = self.slider.value() / self.floatLabel
+            self.slider.valueChanged.connect(self.updateLabel)
+            self.slider.setRange(1, 10)
+            self.slider.setValue(1)
+
+        elif self.etap == 3:  # zapis odbicie wybor kontr
+            self.label.setText("Wybierz wartość współczynnika kontrakcji")
+            self.etap += 1
+            self.slider.valueChanged.connect(self.updateLabelFloat)
+            self.odbicie = self.slider.value()
+            self.floatLabel = 100.0
+            self.slider.setRange(1, 99)
+            self.slider.setValue(50)
+            self.sliderValue.setText('0.5')
+        elif self.etap == 4:  # zapis kontr wybor eksp
+            self.label.setText("Wybierz wartość współczynnika ekspansji")
+            self.etap += 1
+            self.kontrakcja = self.slider.value() / self.floatLabel
+            self.floatLabel = 10.0
+
+            self.slider.setRange(1, 10)
+            self.slider.setValue(1)
+            self.sliderValue.setText('1')
+            self.slider.valueChanged.connect(self.updateLabel)
+
+        elif self.etap == 5:  # zapis eksp wybór funkcji
+            self.etap += 1
+            self.ekspansja = self.slider.value()
             self.layout.removeWidget(self.slider)
             self.layout.removeWidget(self.sliderValue)
             self.slider.deleteLater()
             self.sliderValue.deleteLater()
-            self.label.setText("Wybierz funkcję testową")
+            self.label.setText("Wpisz funkcję testową")
             self.layout.addWidget(self.lineEdit)
             self.layout.addWidget(self.next)
-
-        elif self.etap == 2:
-            self.next.setDisabled(True)
+        elif self.etap == 6:
             self.funkcja = self.lineEdit.text()
-            self.layout.removeWidget(self.lineEdit)
-            self.lineEdit.deleteLater()
-            self.label.setText("Podaj parametry")
-            # print(self.funkcja)
-            # print(self.poczatek)
-            # print(self.stop)
-            # self.draw_graph()
+            self.hide()
+
             self.pełzak()
 
     def updateLabel(self, value):
         self.sliderValue.setText(str(value))
 
     def updateLabelFloat(self, value):
-        self.sliderValue.setText(str(value / 100.0))
+        self.sliderValue.setText(str(value / self.floatLabel))
 
     def calculate(self, name_dict):
         math_name_dict = dict(getmembers(np))
@@ -110,7 +154,7 @@ class Main(QWidget):
         # Ay = np.array([2, 4, 6])
         # ret = np.array(list(map(lambda x, y: calculate(fun, {'x': x, 'y': y}), Ax, Ay)))
 
-        # fun = self.funkcja
+        # fun = self.funkcja #TODO odkomentować
         # fun = "x - y + 2 * x ** 2 +2 * x * y + y ** 2"  #####################
         fun = "sin((x ** 2 + y ** 2) ** 0.5 )"  #####################
         # fun = "(x ** 2 + y ** 2) ** 0.5"  #####################
@@ -151,15 +195,13 @@ class Main(QWidget):
 
     def pełzak(self):
 
-        epsilon = 0.001
+        epsilon = self.epsilon  # 0.001
         iter = 0
-        self.iteracje = 15
 
-        self.poczatek = -6.0  ###################
-        alfa = 1.0  # odbicie > 0
-        beta = 0.5  # kontrakcja 0 < X <1
-        gamma = 2.0  # ekspansja > 1
-        sigma = 0.5  # reduckcja
+        # self.poczatek = -6.0  ###################
+        alfa = self.odbicie  # 1.0  # odbicie > 0
+        beta = self.kontrakcja  # 0.5  # kontrakcja 0 < X <1
+        gamma = self.ekspansja  # 2.0  # ekspansja > 1
 
         x_array = np.array([self.poczatek, self.poczatek + 1, self.poczatek])
         y_array = np.array([self.poczatek, self.poczatek, self.poczatek + 1])
