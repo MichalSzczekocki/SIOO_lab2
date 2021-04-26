@@ -1,6 +1,7 @@
 import sys
 
 import numpy
+import scipy.optimize
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QRadioButton, QComboBox, QSlider, \
     QPushButton, QLineEdit
 from PyQt5.QtCore import Qt
@@ -94,6 +95,7 @@ class Main(QWidget):
             # print(self.funkcja)
             # print(self.poczatek)
             # print(self.stop)
+            # self.draw_graph()
             self.pełzak()
 
     def updateLabel(self, value):
@@ -103,24 +105,61 @@ class Main(QWidget):
         self.sliderValue.setText(str(value / 100.0))
 
     def calculate(self, name_dict):
-        math_name_dict = dict(getmembers(math))
+        math_name_dict = dict(getmembers(np))
         # Ax = np.array([1, 2, 3])
         # Ay = np.array([2, 4, 6])
         # ret = np.array(list(map(lambda x, y: calculate(fun, {'x': x, 'y': y}), Ax, Ay)))
 
         # fun = self.funkcja
-        fun = "x - y + 2 * x ** 2 +2 * x * y + y ** 2"  #####################
+        # fun = "x - y + 2 * x ** 2 +2 * x * y + y ** 2"  #####################
+        fun = "sin((x ** 2 + y ** 2) ** 0.5 )"  #####################
+        # fun = "(x ** 2 + y ** 2) ** 0.5"  #####################
         return eval(fun, {**name_dict, **math_name_dict})
 
-    def pełzak(self):
-        epsilon = 0.1
-        iter = 100
+    def draw_graph(self, a):
+        x = np.linspace(-6, 6, 30)
+        # x = np.arange(-6, 6, 0.5)
+        y = np.linspace(-6, 6, 30)
+        # y = np.arange(-6, 6, 0.5)
 
-        self.poczatek = 4  ###################
-        alfa = 1.0 # odbicie > 0
-        beta = 0.5 # kontrakcja 0 < X <1
-        gamma = 2.0 # ekspansja > 1
-        sigma = 0.5 # reduckcja
+        X, Y = np.meshgrid(x, y)
+
+        Z = np.array(list(
+            map(lambda x, y: self.calculate({'x': x, 'y': y}), X, Y)))
+
+        ax = plt.axes(projection='3d')
+        ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
+                        cmap='viridis', edgecolor='none')
+        ax.set_title('surface')
+
+        # plt.plot(a.x[0], a.x[1], a.fun)
+        # ax.plot_surface(,)
+
+        plt.show()
+
+    def fun(self, *args):
+        return np.sin((args[0][0] ** 2 + args[0][1] ** 2) ** 0.5)
+
+    def wbudowana(self):
+        t = [-6, -6]
+        x = scipy.optimize.minimize(self.fun, t, method='Nelder-Mead', options={'disp': True})
+        print(x.x[0])
+        print(x.x[1])
+        print(x.fun)
+        self.draw_graph(x)
+        return
+
+    def pełzak(self):
+
+        epsilon = 0.001
+        iter = 0
+        self.iteracje = 15
+
+        self.poczatek = -6.0  ###################
+        alfa = 1.0  # odbicie > 0
+        beta = 0.5  # kontrakcja 0 < X <1
+        gamma = 2.0  # ekspansja > 1
+        sigma = 0.5  # reduckcja
 
         x_array = np.array([self.poczatek, self.poczatek + 1, self.poczatek])
         y_array = np.array([self.poczatek, self.poczatek, self.poczatek + 1])
@@ -132,9 +171,11 @@ class Main(QWidget):
         # TODO while zbierznosc > epislon || iteracje > self.iteracje
 
         zbierznosc = 100
-        while zbierznosc > epsilon:  # and self.iteracje < iter:
+        while zbierznosc > epsilon and self.iteracje > iter:
+            # while self.iteracje > iter:
 
             # ustalenie min i max
+            iter += 1
 
             f_Xh = ret[0]
             f_Xl = ret[0]
@@ -153,14 +194,24 @@ class Main(QWidget):
             Xl = np.array([[x_array[index_min]], [y_array[index_min]]])
 
             # Xo - środek cięzkości
+            sux = 0
+            suy = 0
+            for i in range(len(x_array)):
+                if i != index_max:
+                    sux += x_array[i]
+                    suy += y_array[i]
+            suma = np.array([[sux], [suy]])
+            Xo = suma / float((len(x_array) - 1))
+
+            """
             Xo = 0.5 * numpy.array([[float(x_array[0]) + float(y_array[0])],
                                     [float(x_array[len(x_array) - 1]) + float(
                                         y_array[len(y_array) - 1])]])  # len(y_array)-1
-
+            """
             f_Xo = float(np.array(list(
                 map(lambda x, y: self.calculate({'x': x, 'y': y}), Xo[0], Xo[1]))))
             # Xr - odbice
-            Xr = (1 + alfa) * Xo - alfa * Xh
+            Xr = (1. + alfa) * Xo - alfa * Xh
 
             f_Xr = float(np.array(list(
                 map(lambda x, y: self.calculate({'x': x, 'y': y}), Xr[0], Xr[1]))))
@@ -170,7 +221,8 @@ class Main(QWidget):
                 f_Xe = float(np.array(list(
                     map(lambda x, y: self.calculate({'x': x, 'y': y}), Xe[0], Xe[1]))))
 
-                if f_Xe < f_Xh:  # xh <
+                # if f_Xe >= f_Xl:  # xh <
+                if f_Xe < f_Xh:
                     x_array[index_max] = float(Xe[0])
                     y_array[index_max] = float(Xe[1])
                     ret[index_max] = f_Xe
@@ -183,35 +235,81 @@ class Main(QWidget):
                 zbierznosc = 0
                 for i in ret:
                     zbierznosc += (i - f_Xo) ** 2
-                zbierznosc /= len(ret)
+                zbierznosc /= float(len(ret))
                 zbierznosc = zbierznosc ** 0.5
-                print(zbierznosc)
-            if not f_Xr >= f_Xh:
+                # print(zbierznosc)
+
+                if zbierznosc < epsilon:
+                    print(Xl)
+                    print(f_Xl)
+                    return
+
+                continue
+            # TODO stop
+            for i in ret:
+                if i != f_Xh and f_Xr < i:
+                    if f_Xr < f_Xh:
+                        x_array[index_max] = float(Xr[0])
+                        y_array[index_max] = float(Xr[1])
+                        ret[index_max] = f_Xr
+            """
+            if f_Xr < f_Xh:  # TODO P8
                 x_array[index_max] = float(Xr[0])
                 y_array[index_max] = float(Xr[1])
                 ret[index_max] = f_Xr
-
+            """
             # Xc kontrakcja
 
             Xc = beta * Xh + (1 - beta) * Xo
 
             f_Xc = float(np.array(list(
-                    map(lambda x, y: self.calculate({'x': x, 'y': y}), Xc[0], Xc[1]))))
+                map(lambda x, y: self.calculate({'x': x, 'y': y}), Xc[0], Xc[1]))))
 
-            if f_Xc > f_Xh:
-              cosik = 0
-              #redukcja
+            if f_Xc >= f_Xh:
+                for i in range(len(x_array)):
+                    temp = np.array([x_array[i], y_array[i]])
+                    temp = (temp + Xl) / 2.
+                    x_array[i] = temp[0]
+                    y_array[i] = temp[1]
+                # redukcja
 
-              if f_Xr < f_Xo and f_Xr < f_Xl:
-                  x_array[index_max] = float(Xr[0])
-                  y_array[index_max] = float(Xr[1])
-                  ret[index_max] = f_Xr
-                  return Xr
+                for i in ret:
+                    if i != f_Xh and f_Xr < i:
+                        x_array[index_max] = float(Xr[0])
+                        y_array[index_max] = float(Xr[1])
+                        ret[index_max] = f_Xr
 
+                # TODO stop
+
+                zbierznosc = 0
+                for i in ret:
+                    zbierznosc += (i - f_Xo) ** 2
+                zbierznosc /= float(len(ret))
+                zbierznosc = zbierznosc ** 0.5
+                # print(zbierznosc)
+
+                if zbierznosc < epsilon:
+                    print(Xl)
+                    print(f_Xl)
+                    return
+
+                """
+                if f_Xr < f_Xo and f_Xr < f_Xl:  # TODO 10
+                    x_array[index_max] = float(Xr[0])
+                    y_array[index_max] = float(Xr[1])
+                    ret[index_max] = f_Xr
+                    print("elo")
+                    return Xr
+                """
             else:
                 x_array[index_max] = float(Xc[0])
                 y_array[index_max] = float(Xc[1])
                 ret[index_max] = f_Xc
+            print(iter)
+            print(Xl)
+            print(f_Xl)
+        print("finito")
+
 
 def main():
     app = QApplication(sys.argv)
