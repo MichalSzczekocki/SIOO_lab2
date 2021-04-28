@@ -160,10 +160,21 @@ class Main(QWidget):
         # fun = "(x ** 2 + y ** 2) ** 0.5"  #####################
         return eval(fun, {**name_dict, **math_name_dict})
 
-    def draw_graph(self, a):
-        x = np.linspace(-6, 6, 30)
+    def draw_graph(self, a, x, y):
+        if x < 0:
+            xx = int(x - 3)
+        else:
+            xx = int(x + 3)
+        if y < 0:
+            yy = int(y - 3)
+        else:
+            yy = int(y + 3)
+
+        fig = plt.figure()
+
+        x = np.linspace(xx, xx + 10, 30)
         # x = np.arange(-6, 6, 0.5)
-        y = np.linspace(-6, 6, 30)
+        y = np.linspace(yy, yy + 10, 30)
         # y = np.arange(-6, 6, 0.5)
 
         X, Y = np.meshgrid(x, y)
@@ -171,13 +182,24 @@ class Main(QWidget):
         Z = np.array(list(
             map(lambda x, y: self.calculate({'x': x, 'y': y}), X, Y)))
 
-        ax = plt.axes(projection='3d')
-        ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
-                        cmap='viridis', edgecolor='none')
+        ax = fig.add_subplot(projection='3d')
+        # ax = plt.axes(projection='3d')
+        # ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
+        #               cmap='viridis', edgecolor='none')
         ax.set_title('surface')
 
-        # plt.plot(a.x[0], a.x[1], a.fun)
-        # ax.plot_surface(,)
+
+
+        for i in a:
+            ax = fig.add_subplot(projection='3d')
+            ax.set_xlim3d(-10, 10)
+            ax.set_ylim3d(-10, 10)
+            ax.set_zlim3d(-1, 1)
+
+            i[0] = np.append(i[0], i[0][0])
+            i[1] = np.append(i[1], i[1][0])
+            i[2] = np.append(i[2], i[2][0])
+            ax.plot3D(i[0], i[1], i[2])
 
         plt.show()
 
@@ -194,6 +216,8 @@ class Main(QWidget):
         return
 
     def pełzak(self):
+        self.poczatek = float(self.poczatek)
+        steps = []
 
         epsilon = self.epsilon  # 0.001
         iter = 0
@@ -209,7 +233,11 @@ class Main(QWidget):
         ret = np.array(list(
             map(lambda x, y: self.calculate({'x': x, 'y': y}), x_array, y_array)))
         # print(ret)
-
+        temp_step = []
+        temp_step.append(x_array)
+        temp_step.append(y_array)
+        temp_step.append(ret)
+        steps.append(temp_step)
         # TODO while zbierznosc > epislon || iteracje > self.iteracje
 
         zbierznosc = 100
@@ -269,10 +297,25 @@ class Main(QWidget):
                     y_array[index_max] = float(Xe[1])
                     ret[index_max] = f_Xe
 
+                    temp_step = []
+                    temp_step.append(x_array)
+                    temp_step.append(y_array)
+                    temp_step.append(ret)
+                    steps.append(temp_step)
+                    print(temp_step)
+
+
                 else:
                     x_array[index_max] = float(Xr[0])
                     y_array[index_max] = float(Xr[1])
                     ret[index_max] = f_Xr
+
+                    temp_step = []
+                    temp_step.append(x_array)
+                    temp_step.append(y_array)
+                    temp_step.append(ret)
+                    steps.append(temp_step)
+                    print(temp_step)
 
                 zbierznosc = 0
                 for i in ret:
@@ -294,6 +337,14 @@ class Main(QWidget):
                         x_array[index_max] = float(Xr[0])
                         y_array[index_max] = float(Xr[1])
                         ret[index_max] = f_Xr
+
+                        temp_step = []
+                        temp_step.append(x_array)
+                        temp_step.append(y_array)
+                        temp_step.append(ret)
+                        steps.append(temp_step)
+                        print(temp_step)
+
             """
             if f_Xr < f_Xh:  # TODO P8
                 x_array[index_max] = float(Xr[0])
@@ -309,10 +360,18 @@ class Main(QWidget):
 
             if f_Xc >= f_Xh:
                 for i in range(len(x_array)):
-                    temp = np.array([x_array[i], y_array[i]])
+                    temp = np.array([[float(x_array[i])], [float(y_array[i])]])
                     temp = (temp + Xl) / 2.
                     x_array[i] = temp[0]
                     y_array[i] = temp[1]
+
+                    temp_step = []
+                    temp_step.append(x_array)
+                    temp_step.append(y_array)
+                    temp_step.append(ret)
+                    steps.append(temp_step)
+                    print(temp_step)
+
                 # redukcja
 
                 for i in ret:
@@ -320,6 +379,13 @@ class Main(QWidget):
                         x_array[index_max] = float(Xr[0])
                         y_array[index_max] = float(Xr[1])
                         ret[index_max] = f_Xr
+
+                        temp_step = []
+                        temp_step.append(x_array)
+                        temp_step.append(y_array)
+                        temp_step.append(ret)
+                        steps.append(temp_step)
+                        print(temp_step)
 
                 # TODO stop
 
@@ -347,10 +413,19 @@ class Main(QWidget):
                 x_array[index_max] = float(Xc[0])
                 y_array[index_max] = float(Xc[1])
                 ret[index_max] = f_Xc
-            print(iter)
-            print(Xl)
-            print(f_Xl)
+
+                temp_step = []
+                temp_step.append(x_array)
+                temp_step.append(y_array)
+                temp_step.append(ret)
+                steps.append(temp_step)
+                print(temp_step)
+
+            # print(iter)
+        print(Xl)
+        print(f_Xl)
         print("finito")
+        self.draw_graph(steps, Xl[0], Xl[1])
 
 
 def main():
