@@ -1,5 +1,5 @@
 import sys
-
+from random import randint
 import numpy
 import scipy.optimize
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QRadioButton, QComboBox, QSlider, \
@@ -36,7 +36,7 @@ class Main(QWidget):
         self.kontrakcja = 0  # wybór
         self.ekspansja = 0  # wybór
         self.floatLabel = 0
-
+        self.wymiar = 0
         self.layout = QVBoxLayout()
 
         self.label = QLabel("Wybierz warinek stopu")
@@ -126,9 +126,19 @@ class Main(QWidget):
             self.sliderValue.setText('1')
             self.slider.valueChanged.connect(self.updateLabel)
 
-        elif self.etap == 5:  # zapis eksp wybór funkcji
+        elif self.etap == 5:  # zapis eksp wybor wymiar
+            self.label.setText("Wybierz ilość zmiennych")
             self.etap += 1
             self.ekspansja = self.slider.value()
+
+            self.slider.setRange(2, 4)
+            self.slider.setValue(2)
+            self.sliderValue.setText('2')
+            self.slider.valueChanged.connect(self.updateLabel)
+
+        elif self.etap == 6:  # zapis wymiar wybór funkcji
+            self.etap += 1
+            self.wymiar = self.slider.value()
             self.layout.removeWidget(self.slider)
             self.layout.removeWidget(self.sliderValue)
             self.slider.deleteLater()
@@ -136,7 +146,8 @@ class Main(QWidget):
             self.label.setText("Wpisz funkcję testową")
             self.layout.addWidget(self.lineEdit)
             self.layout.addWidget(self.next)
-        elif self.etap == 6:
+
+        elif self.etap == 7:
             self.funkcja = self.lineEdit.text()
             self.hide()
 
@@ -150,14 +161,12 @@ class Main(QWidget):
 
     def calculate(self, name_dict):
         math_name_dict = dict(getmembers(np))
-        # Ax = np.array([1, 2, 3])
-        # Ay = np.array([2, 4, 6])
-        # ret = np.array(list(map(lambda x, y: calculate(fun, {'x': x, 'y': y}), Ax, Ay)))
 
         # fun = self.funkcja #TODO odkomentować
         # fun = "x - y + 2 * x ** 2 +2 * x * y + y ** 2"  #####################
-        fun = "sin((x ** 2 + y ** 2) ** 0.5 )"  #####################
-        # fun = "(x ** 2 + y ** 2) ** 0.5"  #####################
+        #fun = "sin((x ** 2 + y ** 2) ** 0.5 )"  #####################
+        fun = "sin((x ** 2 + y ** 2) ** 0.5 ) + cos(z)"  #####################
+
         return eval(fun, {**name_dict, **math_name_dict})
 
     def draw_graph(self, a, x, y):
@@ -182,16 +191,14 @@ class Main(QWidget):
         Z = np.array(list(
             map(lambda x, y: self.calculate({'x': x, 'y': y}), X, Y)))
 
-        ax = fig.add_subplot(projection='3d')
-        # ax = plt.axes(projection='3d')
-        # ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
-        #               cmap='viridis', edgecolor='none')
+        # ax = fig.add_subplot(projection='3d')
+        ax = plt.axes(projection='3d')
+        ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
+                        cmap='viridis', edgecolor='none', zorder=1)
         ax.set_title('surface')
 
-
-
         for i in a:
-            ax = fig.add_subplot(projection='3d')
+            # ax = fig.add_subplot(projection='3d')
             ax.set_xlim3d(-10, 10)
             ax.set_ylim3d(-10, 10)
             ax.set_zlim3d(-1, 1)
@@ -199,23 +206,30 @@ class Main(QWidget):
             i[0] = np.append(i[0], i[0][0])
             i[1] = np.append(i[1], i[1][0])
             i[2] = np.append(i[2], i[2][0])
-            ax.plot3D(i[0], i[1], i[2])
+            ax.plot3D(i[0], i[1], i[2], color='red', zorder=10)
 
         plt.show()
 
     def fun(self, *args):
+        if self.wymiar == 3:
+            return np.sin((args[0][0] ** 2 + args[0][1] ** 2) ** 0.5) + np.cos(args[0][2])
         return np.sin((args[0][0] ** 2 + args[0][1] ** 2) ** 0.5)
 
     def wbudowana(self):
-        t = [-6, -6]
+        t = [self.poczatek] * self.wymiar
+
         x = scipy.optimize.minimize(self.fun, t, method='Nelder-Mead', options={'disp': True})
-        print(x.x[0])
-        print(x.x[1])
+        for i in range(self.wymiar):
+            print(x.x[i])
+        # print(x.x[0])
+        # print(x.x[1])
         print(x.fun)
-        self.draw_graph(x)
-        return
+        # self.draw_graph(x)
 
     def pełzak(self):
+
+        self.wbudowana()
+
         self.poczatek = float(self.poczatek)
         steps = []
 
@@ -227,18 +241,29 @@ class Main(QWidget):
         beta = self.kontrakcja  # 0.5  # kontrakcja 0 < X <1
         gamma = self.ekspansja  # 2.0  # ekspansja > 1
 
-        x_array = np.array([self.poczatek, self.poczatek + 1, self.poczatek])
-        y_array = np.array([self.poczatek, self.poczatek, self.poczatek + 1])
+        punkty = []
 
-        ret = np.array(list(
-            map(lambda x, y: self.calculate({'x': x, 'y': y}), x_array, y_array)))
-        # print(ret)
-        temp_step = []
-        temp_step.append(x_array)
-        temp_step.append(y_array)
-        temp_step.append(ret)
-        steps.append(temp_step)
-        # TODO while zbierznosc > epislon || iteracje > self.iteracje
+        for i in range(self.wymiar):
+            temp = np.array([])
+            for j in range(self.wymiar + 1):
+                temp = np.append(temp, float(self.poczatek + randint(-1, 1)))
+            punkty.append(temp)
+
+        # x_array = np.array([self.poczatek, self.poczatek + 1, self.poczatek])
+        # y_array = np.array([self.poczatek, self.poczatek, self.poczatek + 1])  # D
+
+        if self.wymiar == 2:
+            ret = np.array(list(
+                map(lambda x, y: self.calculate({'x': x, 'y': y}), punkty[0], punkty[1])))
+        elif self.wymiar == 3:
+            ret = np.array(list(
+                map(lambda x, y, z: self.calculate({'x': x, 'y': y, 'z': z}), punkty[0], punkty[1], punkty[2])))
+        else:
+            ret = np.array(list(
+                map(lambda x, y, z, t: self.calculate({'x': x, 'y': y, 'z': z, 't': t}), punkty[0], punkty[1],
+                    punkty[2], punkty[3])))
+
+        steps.append(punkty)
 
         zbierznosc = 100
         while zbierznosc > epsilon and self.iteracje > iter:
@@ -260,62 +285,112 @@ class Main(QWidget):
                     f_Xh = ret[i]
                     index_max = i
 
-            Xh = np.array([[x_array[index_max]], [y_array[index_max]]])
-            Xl = np.array([[x_array[index_min]], [y_array[index_min]]])
+            Xh = np.array([])
+            Xl = np.array([])
+
+            for i in punkty:
+                Xh = np.append(Xh, i[index_max])
+                Xl = np.append(Xl, i[index_min])
+
+            # Xh = np.array([[x_array[index_max]], [y_array[index_max]]])  # D
+            # Xl = np.array([[x_array[index_min]], [y_array[index_min]]])  # D
 
             # Xo - środek cięzkości
-            sux = 0
-            suy = 0
-            for i in range(len(x_array)):
-                if i != index_max:
-                    sux += x_array[i]
-                    suy += y_array[i]
-            suma = np.array([[sux], [suy]])
-            Xo = suma / float((len(x_array) - 1))
+            # sux = 0
+            # suy = 0
+
+            sumy = np.zeros(self.wymiar)
+            temp = 0
+            for i in range(self.wymiar):
+                for j in range(self.wymiar + 1):
+                    if j != index_max:
+                        sumy[temp] += punkty[i][j]
+                temp += 1
+
+            Xo = sumy / float(self.wymiar)
 
             """
             Xo = 0.5 * numpy.array([[float(x_array[0]) + float(y_array[0])],
                                     [float(x_array[len(x_array) - 1]) + float(
                                         y_array[len(y_array) - 1])]])  # len(y_array)-1
             """
-            f_Xo = float(np.array(list(
-                map(lambda x, y: self.calculate({'x': x, 'y': y}), Xo[0], Xo[1]))))
+
+            if self.wymiar == 2:
+
+                f_Xo = np.array(list(
+                    map(lambda x, y: self.calculate({'x': x, 'y': y}), np.array([Xo[0]]), np.array([Xo[1]]))))
+            elif self.wymiar == 3:
+                f_Xo = np.array(list(
+                    map(lambda x, y, z: self.calculate({'x': x, 'y': y, 'z': z}), np.array([Xo[0]]), np.array([Xo[1]]),
+                        np.array([Xo[2]]))))
+            else:
+                f_Xo = np.array(list(
+                    map(lambda x, y, z, t: self.calculate({'x': x, 'y': y, 'z': z, 't': t}), np.array([Xo[0]]),
+                        np.array([Xo[1]]),
+                        np.array([Xo[2]]), np.array([Xo[3]]))))
+
             # Xr - odbice
             Xr = (1. + alfa) * Xo - alfa * Xh
 
-            f_Xr = float(np.array(list(
-                map(lambda x, y: self.calculate({'x': x, 'y': y}), Xr[0], Xr[1]))))
+            if self.wymiar == 2:
+
+                f_Xr = np.array(list(
+                    map(lambda x, y: self.calculate({'x': x, 'y': y}), np.array([Xr[0]]), np.array([Xr[1]]))))
+            elif self.wymiar == 3:
+                f_Xr = np.array(list(
+                    map(lambda x, y, z: self.calculate({'x': x, 'y': y, 'z': z}), np.array([Xr[0]]), np.array([Xr[1]]),
+                        np.array([Xr[2]]))))
+            else:
+                f_Xr = np.array(list(
+                    map(lambda x, y, z, t: self.calculate({'x': x, 'y': y, 'z': z, 't': t}), np.array([Xr[0]]),
+                        np.array([Xr[1]]),
+                        np.array([Xr[2]]), np.array([Xr[3]]))))
+
             # Xe - ekspansja
             if f_Xr < f_Xl:
                 Xe = Xo + gamma * (Xr - Xo)
-                f_Xe = float(np.array(list(
-                    map(lambda x, y: self.calculate({'x': x, 'y': y}), Xe[0], Xe[1]))))
+
+                if self.wymiar == 2:
+
+                    f_Xe = np.array(list(
+                        map(lambda x, y: self.calculate({'x': x, 'y': y}), np.array([Xe[0]]), np.array([Xe[1]]))))
+                elif self.wymiar == 3:
+                    f_Xe = np.array(list(
+                        map(lambda x, y, z: self.calculate({'x': x, 'y': y, 'z': z}), np.array([Xe[0]]),
+                            np.array([Xe[1]]),
+                            np.array([Xe[2]]))))
+                else:
+                    f_Xe = np.array(list(
+                        map(lambda x, y, z, t: self.calculate({'x': x, 'y': y, 'z': z, 't': t}), np.array([Xe[0]]),
+                            np.array([Xe[1]]),
+                            np.array([Xe[2]]), np.array([Xe[3]]))))
 
                 # if f_Xe >= f_Xl:  # xh <
                 if f_Xe < f_Xh:
-                    x_array[index_max] = float(Xe[0])
-                    y_array[index_max] = float(Xe[1])
+
+                    temp = 0
+                    for i in punkty:
+                        i[index_max] = Xe[temp]
+                        temp += 1
+                    # x_array[index_max] = float(Xe[0])
+                    # y_array[index_max] = float(Xe[1])  # D
                     ret[index_max] = f_Xe
 
-                    temp_step = []
-                    temp_step.append(x_array)
-                    temp_step.append(y_array)
-                    temp_step.append(ret)
-                    steps.append(temp_step)
-                    print(temp_step)
+                    steps.append(punkty)
+                    print(punkty)
 
 
                 else:
-                    x_array[index_max] = float(Xr[0])
-                    y_array[index_max] = float(Xr[1])
+                    temp = 0
+                    for i in punkty:
+                        i[index_max] = Xr[temp]
+                        temp += 1
+                    # x_array[index_max] = float(Xr[0])
+                    # y_array[index_max] = float(Xr[1])  # D
                     ret[index_max] = f_Xr
 
-                    temp_step = []
-                    temp_step.append(x_array)
-                    temp_step.append(y_array)
-                    temp_step.append(ret)
-                    steps.append(temp_step)
-                    print(temp_step)
+                    steps.append(punkty)
+                    print(punkty)
 
                 zbierznosc = 0
                 for i in ret:
@@ -334,16 +409,16 @@ class Main(QWidget):
             for i in ret:
                 if i != f_Xh and f_Xr < i:
                     if f_Xr < f_Xh:
-                        x_array[index_max] = float(Xr[0])
-                        y_array[index_max] = float(Xr[1])
+
+                        temp = 0
+                        for j in punkty:
+                            j[index_max] = Xr[temp]
+                            temp += 1
+
                         ret[index_max] = f_Xr
 
-                        temp_step = []
-                        temp_step.append(x_array)
-                        temp_step.append(y_array)
-                        temp_step.append(ret)
-                        steps.append(temp_step)
-                        print(temp_step)
+                        steps.append(punkty)
+                        print(punkty)
 
             """
             if f_Xr < f_Xh:  # TODO P8
@@ -355,37 +430,72 @@ class Main(QWidget):
 
             Xc = beta * Xh + (1 - beta) * Xo
 
-            f_Xc = float(np.array(list(
-                map(lambda x, y: self.calculate({'x': x, 'y': y}), Xc[0], Xc[1]))))
+            if self.wymiar == 2:
+
+                f_Xc = np.array(list(
+                    map(lambda x, y: self.calculate({'x': x, 'y': y}), np.array([Xc[0]]), np.array([Xc[1]]))))
+            elif self.wymiar == 3:
+                f_Xc = np.array(list(
+                    map(lambda x, y, z: self.calculate({'x': x, 'y': y, 'z': z}), np.array([Xc[0]]),
+                        np.array([Xc[1]]),
+                        np.array([Xc[2]]))))
+            else:
+                f_Xc = np.array(list(
+                    map(lambda x, y, z, t: self.calculate({'x': x, 'y': y, 'z': z, 't': t}), np.array([Xe[0]]),
+                        np.array([Xc[1]]),
+                        np.array([Xc[2]]), np.array([Xc[3]]))))
 
             if f_Xc >= f_Xh:
-                for i in range(len(x_array)):
-                    temp = np.array([[float(x_array[i])], [float(y_array[i])]])
-                    temp = (temp + Xl) / 2.
-                    x_array[i] = temp[0]
-                    y_array[i] = temp[1]
-
-                    temp_step = []
-                    temp_step.append(x_array)
-                    temp_step.append(y_array)
-                    temp_step.append(ret)
-                    steps.append(temp_step)
-                    print(temp_step)
 
                 # redukcja
 
+                for i in range(self.wymiar):
+                    temp = np.array([])
+                    for j in punkty:
+                        temp = np.append(temp, j[i])
+                    temp = (temp + Xl) / float(self.wymiar)
+
+                    k = 0
+                    for j in punkty:
+                        j[i] = temp[k]
+                        k += 1
+
+                """
+                for i in range(len(ret)):
+                    temp = np.array([])
+                    for j in punkty:
+                        temp = np.append(temp, j[i])  # ([[float(x_array[i])], [float(y_array[i])]])
+                    temp = (temp + Xl) / float(self.wymiar)
+                    for k in range(len(ret)):
+                        for n in punkty:
+                            n[k] = temp[k]
+                """
+
+                if self.wymiar == 2:
+                    ret = np.array(list(
+                        map(lambda x, y: self.calculate({'x': x, 'y': y}), punkty[0], punkty[1])))
+                elif self.wymiar == 3:
+                    ret = np.array(list(
+                        map(lambda x, y, z: self.calculate({'x': x, 'y': y, 'z': z}), punkty[0], punkty[1], punkty[2])))
+                else:
+                    ret = np.array(list(
+                        map(lambda x, y, z, t: self.calculate({'x': x, 'y': y, 'z': z, 't': t}), punkty[0], punkty[1],
+                            punkty[2], punkty[3])))
+                steps.append(punkty)
+                print(punkty)
+
                 for i in ret:
                     if i != f_Xh and f_Xr < i:
-                        x_array[index_max] = float(Xr[0])
-                        y_array[index_max] = float(Xr[1])
+
+                        temp = 0
+                        for j in punkty:
+                            j[index_max] = Xr[temp]
+                            temp += 1
+
                         ret[index_max] = f_Xr
 
-                        temp_step = []
-                        temp_step.append(x_array)
-                        temp_step.append(y_array)
-                        temp_step.append(ret)
-                        steps.append(temp_step)
-                        print(temp_step)
+                        steps.append(punkty)
+                        print(punkty)
 
                 # TODO stop
 
@@ -410,22 +520,21 @@ class Main(QWidget):
                     return Xr
                 """
             else:
-                x_array[index_max] = float(Xc[0])
-                y_array[index_max] = float(Xc[1])
-                ret[index_max] = f_Xc
 
-                temp_step = []
-                temp_step.append(x_array)
-                temp_step.append(y_array)
-                temp_step.append(ret)
-                steps.append(temp_step)
-                print(temp_step)
+                temp = 0
+                for i in punkty:
+                    i[index_max] = Xc[temp]
+                    temp += 1
+                ret[index_max] = f_Xr
+
+                steps.append(punkty)
+                print(punkty)
 
             # print(iter)
         print(Xl)
         print(f_Xl)
         print("finito")
-        self.draw_graph(steps, Xl[0], Xl[1])
+        # self.draw_graph(steps, Xl[0], Xl[1])
 
 
 def main():
