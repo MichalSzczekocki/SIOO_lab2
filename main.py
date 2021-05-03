@@ -181,8 +181,12 @@ class Main(QWidget):
 
         # fun = self.funkcja #TODO odkomentować
         # fun = "x - y + 2 * x ** 2 +2 * x * y + y ** 2"  #####################
-        fun = "sin((x ** 2 + y ** 2) ** 0.5 )"  #####################
-        # fun = "sin((x ** 2 + y ** 2) ** 0.5 ) + cos(z)"  #####################
+        if self.wymiar == 2:
+            fun = "sin((x ** 2 + y ** 2) ** 0.5 )"  #####################
+        elif self.wymiar == 3:
+            fun = "sin((x ** 2 + y ** 2) ** 0.5 ) + cos(z)"  #####################
+        else:
+            fun = "sin((x ** 2 + y ** 2) ** 0.5 ) + cos(z) - cos(t)"  #####################
 
         return eval(fun, {**name_dict, **math_name_dict})
 
@@ -245,13 +249,17 @@ class Main(QWidget):
         plt.show()
 
     def fun(self, *args):
-        if self.wymiar == 3:
+        if self.wymiar == 2:
+            return np.sin((args[0][0] ** 2 + args[0][1] ** 2) ** 0.5)
+        elif self.wymiar == 3:
             return np.sin((args[0][0] ** 2 + args[0][1] ** 2) ** 0.5) + np.cos(args[0][2])
-        return np.sin((args[0][0] ** 2 + args[0][1] ** 2) ** 0.5)
+        else:
+            return np.sin((args[0][0] ** 2 + args[0][1] ** 2) ** 0.5) + np.cos(args[0][2]) - np.cos(args[0][3])
 
     def wbudowana(self):
         t = [self.poczatek] * self.wymiar
 
+        print("Wbudowana")
         x = scipy.optimize.minimize(self.fun, t, method='Nelder-Mead', options={'disp': True})
         for i in range(self.wymiar):
             print(x.x[i])
@@ -262,7 +270,8 @@ class Main(QWidget):
 
     def pełzak(self):
 
-        # self.wbudowana()
+        self.wbudowana()
+        print("Własna")
 
         self.poczatek = float(self.poczatek)
         steps = []
@@ -480,7 +489,7 @@ class Main(QWidget):
                         np.array([Xc[2]]))))
             else:
                 f_Xc = np.array(list(
-                    map(lambda x, y, z, t: self.calculate({'x': x, 'y': y, 'z': z, 't': t}), np.array([Xe[0]]),
+                    map(lambda x, y, z, t: self.calculate({'x': x, 'y': y, 'z': z, 't': t}), np.array([Xc[0]]),
                         np.array([Xc[1]]),
                         np.array([Xc[2]]), np.array([Xc[3]]))))
 
