@@ -1,6 +1,6 @@
 import sys
 from random import randint
-import numpy
+
 import scipy.optimize
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QRadioButton, QComboBox, QSlider, \
     QPushButton, QLineEdit
@@ -8,8 +8,25 @@ from PyQt5.QtCore import Qt
 from inspect import getmembers
 import numpy as np
 import matplotlib.pyplot as plt
-import math
-from scipy import optimize
+from mpl_toolkits.mplot3d import Axes3D
+
+
+def record_step(points, value):
+    result = []
+    """
+    for i in range(len(value)):
+        temp = []
+        for j in points:
+            temp.append(j[i])
+        temp.append(value[i])
+        result.append(temp)
+    """
+    for i in points:
+        result.append(i.copy())
+    result.append(value.copy())
+
+    # prev.append(result)
+    return result
 
 
 class Main(QWidget):
@@ -164,8 +181,8 @@ class Main(QWidget):
 
         # fun = self.funkcja #TODO odkomentować
         # fun = "x - y + 2 * x ** 2 +2 * x * y + y ** 2"  #####################
-        #fun = "sin((x ** 2 + y ** 2) ** 0.5 )"  #####################
-        fun = "sin((x ** 2 + y ** 2) ** 0.5 ) + cos(z)"  #####################
+        fun = "sin((x ** 2 + y ** 2) ** 0.5 )"  #####################
+        # fun = "sin((x ** 2 + y ** 2) ** 0.5 ) + cos(z)"  #####################
 
         return eval(fun, {**name_dict, **math_name_dict})
 
@@ -190,23 +207,40 @@ class Main(QWidget):
 
         Z = np.array(list(
             map(lambda x, y: self.calculate({'x': x, 'y': y}), X, Y)))
+        """
+        plt.contour(X, Y, Z, levels=list(np.arange(0, 10, 0.5)))
+        plt.gca().set_aspect("equal")
+        plt.xlim((-10, 10))
+        plt.ylim((-10, 10))
 
+        for i in a:
+            i[0] = np.append(i[0], i[0][0])
+            i[1] = np.append(i[1], i[1][0])
+            print(i[0])
+            print(i[1])
+            plt.plot(i[0], i[1], color='red')
+            
+
+        """
         # ax = fig.add_subplot(projection='3d')
-        ax = plt.axes(projection='3d')
+        # ax = plt.axes(projection='3d')
+
+        ax = Axes3D(fig)
+
         ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
                         cmap='viridis', edgecolor='none', zorder=1)
         ax.set_title('surface')
 
         for i in a:
             # ax = fig.add_subplot(projection='3d')
-            ax.set_xlim3d(-10, 10)
-            ax.set_ylim3d(-10, 10)
-            ax.set_zlim3d(-1, 1)
-
+            # ax.set_xlim3d(-10, 10)
+            # ax.set_ylim3d(-10, 10)
+            # ax.set_zlim3d(-1, 1)
+            # ax = plt.axes(projection='3d')
             i[0] = np.append(i[0], i[0][0])
             i[1] = np.append(i[1], i[1][0])
             i[2] = np.append(i[2], i[2][0])
-            ax.plot3D(i[0], i[1], i[2], color='red', zorder=10)
+            ax.plot3D(i[0], i[1], i[2], zorder=10)
 
         plt.show()
 
@@ -228,7 +262,7 @@ class Main(QWidget):
 
     def pełzak(self):
 
-        self.wbudowana()
+        # self.wbudowana()
 
         self.poczatek = float(self.poczatek)
         steps = []
@@ -263,11 +297,17 @@ class Main(QWidget):
                 map(lambda x, y, z, t: self.calculate({'x': x, 'y': y, 'z': z, 't': t}), punkty[0], punkty[1],
                     punkty[2], punkty[3])))
 
-        steps.append(punkty)
+        # steps = record_step(steps, punkty, ret)
+        # print(steps[len(steps) - 1])
 
         zbierznosc = 100
         while zbierznosc > epsilon and self.iteracje > iter:
             # while self.iteracje > iter:
+
+            record = record_step(punkty, ret)
+            # record_step(steps, punkty, ret)
+            steps.append(record)
+            print(record)
 
             # ustalenie min i max
             iter += 1
@@ -376,9 +416,8 @@ class Main(QWidget):
                     # y_array[index_max] = float(Xe[1])  # D
                     ret[index_max] = f_Xe
 
-                    steps.append(punkty)
-                    print(punkty)
-
+                    # steps = record_step(steps, punkty, ret)
+                    # print(steps[len(steps) - 1])
 
                 else:
                     temp = 0
@@ -389,8 +428,8 @@ class Main(QWidget):
                     # y_array[index_max] = float(Xr[1])  # D
                     ret[index_max] = f_Xr
 
-                    steps.append(punkty)
-                    print(punkty)
+                    # steps = record_step(steps, punkty, ret)
+                    # print(steps[len(steps) - 1])
 
                 zbierznosc = 0
                 for i in ret:
@@ -417,8 +456,8 @@ class Main(QWidget):
 
                         ret[index_max] = f_Xr
 
-                        steps.append(punkty)
-                        print(punkty)
+                        # steps = record_step(steps, punkty, ret)
+                        # print(steps[len(steps) - 1])
 
             """
             if f_Xr < f_Xh:  # TODO P8
@@ -481,8 +520,8 @@ class Main(QWidget):
                     ret = np.array(list(
                         map(lambda x, y, z, t: self.calculate({'x': x, 'y': y, 'z': z, 't': t}), punkty[0], punkty[1],
                             punkty[2], punkty[3])))
-                steps.append(punkty)
-                print(punkty)
+                # steps = record_step(steps, punkty, ret)
+                # print(steps[len(steps) - 1])
 
                 for i in ret:
                     if i != f_Xh and f_Xr < i:
@@ -494,8 +533,8 @@ class Main(QWidget):
 
                         ret[index_max] = f_Xr
 
-                        steps.append(punkty)
-                        print(punkty)
+                        # steps = record_step(steps, punkty, ret)
+                        # print(steps[len(steps) - 1])
 
                 # TODO stop
 
@@ -527,14 +566,15 @@ class Main(QWidget):
                     temp += 1
                 ret[index_max] = f_Xr
 
-                steps.append(punkty)
-                print(punkty)
+                # steps = record_step(steps, punkty, ret)
+                # print(steps[len(steps) - 1])
 
             # print(iter)
         print(Xl)
         print(f_Xl)
         print("finito")
-        # self.draw_graph(steps, Xl[0], Xl[1])
+        if self.wymiar == 2:
+            self.draw_graph(steps, Xl[0], Xl[1])
 
 
 def main():
