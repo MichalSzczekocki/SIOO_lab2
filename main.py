@@ -48,7 +48,7 @@ class Main(QWidget):
         self.funkcja = "brak"
         self.poczatek = 0
         self.iteracje = 100  # wybór
-        self.epsilon = 0  # wybór
+        self.epsilon = 0.0001  # wybór
         self.odbicie = 0  # wybór
         self.kontrakcja = 0  # wybór
         self.ekspansja = 0  # wybór
@@ -102,8 +102,8 @@ class Main(QWidget):
             self.poczatek = self.slider.value()
             if self.stop == "Ilość iteracji":
                 self.label.setText("Wybierz ilość iteracji")
-                self.slider.setRange(1, 50)
-                self.slider.setValue(25)
+                self.slider.setRange(50, 150)
+                self.slider.setValue(100)
             else:
                 self.label.setText("Wybierz dokładność")
                 self.slider.setRange(0, 1000)
@@ -182,7 +182,8 @@ class Main(QWidget):
         # fun = self.funkcja #TODO odkomentować
         # fun = "x - y + 2 * x ** 2 +2 * x * y + y ** 2"  #####################
         if self.wymiar == 2:
-            fun = "sin((x ** 2 + y ** 2) ** 0.5 )"  #####################
+            #fun = "sin((x ** 2 + y ** 2) ** 0.5 )"  #####################
+            fun = "(1 - x)**2 + 100*(y - x**2)**2"  #####################
         elif self.wymiar == 3:
             fun = "sin((x ** 2 + y ** 2) ** 0.5 ) + cos(z)"  #####################
         else:
@@ -250,7 +251,8 @@ class Main(QWidget):
 
     def fun(self, *args):
         if self.wymiar == 2:
-            return np.sin((args[0][0] ** 2 + args[0][1] ** 2) ** 0.5)
+            #return np.sin((args[0][0] ** 2 + args[0][1] ** 2) ** 0.5)
+            return (1 - args[0][0])**2 + 100*(args[0][1] - args[0][0]**2)**2
         elif self.wymiar == 3:
             return np.sin((args[0][0] ** 2 + args[0][1] ** 2) ** 0.5) + np.cos(args[0][2])
         else:
@@ -310,7 +312,8 @@ class Main(QWidget):
         # print(steps[len(steps) - 1])
 
         zbierznosc = 100
-        while zbierznosc > epsilon and self.iteracje > iter:
+        #while zbierznosc > epsilon and self.iteracje > iter:
+        while self.iteracje > iter:
             # while self.iteracje > iter:
 
             record = record_step(punkty, ret)
